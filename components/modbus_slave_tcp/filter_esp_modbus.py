@@ -16,16 +16,28 @@ CODEOWNERS = ["@pintomax"]
 # Set True to patch mb_slave.c for "Modbus request" / "Modbus response" INFO logs (fc, addr, count, len).
 ENABLE_MODBUS_REQUEST_RESPONSE_LOGGING = False
 
-# Write sdkconfig.defaults so ESP-IDF enables VFS select (required by esp-modbus vfs_eventfd.c;
-# fixes linker undefined reference to esp_vfs_select_triggered / esp_vfs_select_triggered_isr).
-# Only this option; flash size etc. are left to the user/board.
-_SDKCONFIG_DEFAULTS = """# Required for VFS eventfd (esp-modbus)
-CONFIG_VFS_SUPPORT_SELECT=y
-"""
+# Merge into sdkconfig.defaults: VFS (required by esp-modbus) + force 4MB flash (board default is 2MB; overrides so "Expected 4MB, found 2MB" goes away).
+_VFS_LINE = "CONFIG_VFS_SUPPORT_SELECT=y"
+_FLASH_4MB = "CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y"
 dst_defaults = os.path.join(env["PROJECT_DIR"], "sdkconfig.defaults")
+existing = ""
+if os.path.isfile(dst_defaults):
+    with open(dst_defaults) as f:
+        existing = f.read()
+
+def drop(line):
+    s = line.strip()
+    return "CONFIG_VFS_SUPPORT_SELECT" in s or s.startswith("CONFIG_ESPTOOLPY_FLASHSIZE_")
+
+lines = [l for l in existing.splitlines() if not drop(l)]
+new_content = "\n".join(lines).rstrip()
+if new_content:
+    new_content += "\n"
+new_content += "\n# modbus_slave_tcp: esp-modbus + 4MB flash\n"
+new_content += _VFS_LINE + "\n" + _FLASH_4MB + "\n"
 with open(dst_defaults, "w") as f:
-    f.write(_SDKCONFIG_DEFAULTS)
-print("filter_esp_modbus: wrote sdkconfig.defaults for CONFIG_VFS_SUPPORT_SELECT")
+    f.write(new_content)
+print("filter_esp_modbus: merged CONFIG_VFS_SUPPORT_SELECT and CONFIG_ESPTOOLPY_FLASHSIZE_4MB into sdkconfig.defaults")
 # Remove env-named sdkconfig so it is regenerated from sdkconfig.defaults (PlatformIO uses sdkconfig.<PIOENV>)
 pioenv = env.get("PIOENV") or os.path.basename(env["PROJECT_DIR"].rstrip(os.sep))
 for name in ("sdkconfig", "sdkconfig." + pioenv, "sdkconfig." + pioenv + ".esphomeinternal"):
