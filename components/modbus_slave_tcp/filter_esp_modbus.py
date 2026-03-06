@@ -11,8 +11,6 @@ import os
 import json
 import shutil
 
-CODEOWNERS = ["@pintomax"]
-
 # Set True to patch mb_slave.c for "Modbus request" / "Modbus response" INFO logs (fc, addr, count, len).
 ENABLE_MODBUS_REQUEST_RESPONSE_LOGGING = False
 

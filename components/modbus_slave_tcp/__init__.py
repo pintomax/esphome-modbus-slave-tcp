@@ -5,6 +5,7 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID
 from esphome.core import CORE
 
+CODEOWNERS = ["@pintomax"]
 DEPENDENCIES = ["wifi"]
 
 CONF_PORT = "port"
